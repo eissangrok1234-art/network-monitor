@@ -1,7 +1,0 @@
-flask
-flask-socketio
-scapy
-scikit-learn
-eventlet
-reportlab
-psutil
