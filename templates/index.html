@@ -1,0 +1,476 @@
+﻿<!DOCTYPE html>
+<html>
+<script>
+    const ctx = document.getElementById('myChart');
+
+    let chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Devices', 'Alerts', 'Open Ports'],
+            datasets: [{
+                label: 'Network Stats',
+                data: [0, 0, 0],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: { color: 'white' }
+                }
+            },
+            scales: {
+                x: { ticks: { color: 'white' } },
+                y: { ticks: { color: 'white' } }
+            }
+        }
+    });
+
+    // 🔥 تحديث تلقائي
+    function updateDashboard() {
+        fetch('/data')
+            .then(res => res.json())
+            .then(data => {
+
+                // تحديث chart
+                chart.data.datasets[0].data = [
+                    data.chart.devices_count,
+                    data.chart.alerts_count,
+                    data.chart.ports_count
+                ];
+                chart.update();
+
+            });
+    }
+
+    // كل 3 ثواني
+    setInterval(updateDashboard, 3000);
+</script>
+<head>
+    <title>Network Monitor</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a, #020617);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .navbar {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+        }
+
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 0 25px rgba(56,189,248,0.4);
+            }
+
+        .btn-custom {
+            background: linear-gradient(45deg, #38bdf8, #6366f1);
+            border: none;
+            color: white;
+            border-radius: 10px;
+            transition: 0.3s;
+        }
+
+            .btn-custom:hover {
+                transform: scale(1.05);
+                box-shadow: 0 0 15px #38bdf8;
+            }
+
+        .section-title {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+        .data-text {
+            color: #e2e8f0;
+        }
+
+        .alert-text {
+            color: #f87171;
+            font-weight: bold;
+        }
+
+        table {
+            color: white;
+        }
+
+        h1 {
+            text-shadow: 0 0 10px #38bdf8;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark px-4 py-2">
+        <span class="navbar-brand">🚀 Network Monitor</span>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+    </nav>
+
+    <div class="container mt-4">
+
+        <h1 class="text-center mb-4">📡 Network Security Dashboard</h1>
+
+        <!-- زر الفحص -->
+        <div class="text-center mb-4">
+            <a href="/scan" class="btn btn-custom btn-lg">⚡ Start Scan</a>
+            <a href="/sniff" class="btn btn-warning btn-lg">📡 Start Sniffing</a>
+            <a href="/report" class="btn btn-success">📊 Generate Report</a>
+
+        </div>
+
+        <!-- 📊 Network Usage + Alerts -->
+        <div class="row mb-4">
+
+            <!-- Usage -->
+            <div class="col-md-6">
+                <div class="card p-4">
+                    <h4 class="section-title">📊 Network Usage</h4>
+                    <p class="data-text">Sent: {{ usage.bytes_sent if usage else 0 }}</p>
+                    <p class="data-text">Received: {{ usage.bytes_recv if usage else 0 }}</p>
+                </div>
+            </div>
+
+            <!-- Alerts -->
+            <div class="col-md-6">
+                <div class="card p-4">
+                    <h4 class="section-title">🚨 Alerts</h4>
+                    ⚠️ AI detected abnormal network behavior!
+                    {% if alerts %}
+                    <ul>
+                        {% for alert in alerts %}
+                        <li class="alert-text">⚠️ {{ alert }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>No alerts</p>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 💻 Devices -->
+        <div class="card p-4 mb-4">
+            <h4 class="section-title">💻 Connected Devices</h4>
+
+            {% if devices %}
+            <table class="table table-dark table-hover">
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Open Ports</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for device in devices %}
+                    <tr>
+                        <td>{{ device }}</td>
+                        <td>
+                            {% if ports[device] %}
+                            {{ ports[device] }}
+                            {% else %}
+                            None
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No devices found</p>
+            {% endif %}
+        </div>
+
+        <!-- 📊 Charts -->
+        <div class="card p-4 mb-4">
+            <h4 class="section-title">📡 Live Network Traffic</h4>
+            <canvas id="trafficChart"></canvas>
+        </div>
+        <div class="card p-4 mb-4">
+            <h4 class="section-title">📊 Network Analytics</h4>
+            <canvas id="myChart"></canvas>
+        </div>
+
+        <!-- 📊 Graph -->
+        <div class="card p-4">
+            <h4 class="section-title">📊 Network Graph</h4>
+            <img src="/static/network.png" class="img-fluid" alt="Network Graph">
+        </div>
+        <div class="card p-4 mt-4">
+            <h4 class="section-title">📡 Live Packet Monitor</h4>
+
+            <table class="table table-dark table-striped">
+                <thead>
+                    <tr>
+                        <th>Source IP</th>
+                        <th>Destination IP</th>
+                        <th>Protocol</th>
+                        <th>Alert</th>
+                    </tr>
+                </thead>
+                <tbody id="packetTable">
+                </tbody>
+            </table>
+        </div>
+        <div class="card p-4 mt-4">
+            <h4 class="section-title">📊 Live Packet Traffic</h4>
+            <canvas id="trafficChart"></canvas>
+        </div>
+        <div class="card p-4 mt-4">
+            <h4 class="section-title">🚨 DDoS Alerts</h4>
+            <ul id="ddosAlerts"></ul>
+        </div>
+        <div class="card p-4 mt-4">
+            <h4 class="section-title">🛡️ IDS Alerts</h4>
+            <ul id="idsAlerts"></ul>
+        </div>
+
+    </div>
+    <script>
+        const trafficCtx = document.getElementById('trafficChart');
+
+        let trafficChart = new Chart(trafficCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Packets per 2 sec',
+                    data: [],
+                    borderWidth: 2,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { labels: { color: 'white' } }
+                },
+                scales: {
+                    x: { ticks: { color: 'white' } },
+                    y: { ticks: { color: 'white' } }
+                }
+            }
+        });
+
+        const socket = io();
+
+        socket.on("traffic", function (data) {
+
+            let time = new Date().toLocaleTimeString();
+
+            trafficChart.data.labels.push(time);
+            trafficChart.data.datasets[0].data.push(data.rate);
+
+            // احتفظ بآخر 15 نقطة
+            if (trafficChart.data.labels.length > 15) {
+                trafficChart.data.labels.shift();
+                trafficChart.data.datasets[0].data.shift();
+            }
+
+            trafficChart.update();
+        });
+    </script>
+
+
+    <!-- Chart Script -->
+    <script>
+        const socket = io();
+
+        // Chart
+        const ctx = document.getElementById('myChart');
+
+        let chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Devices', 'Alerts', 'Open Ports'],
+                datasets: [{
+                    label: 'Live Data',
+                    data: [0, 0, 0],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { labels: { color: 'white' } }
+                },
+                scales: {
+                    x: { ticks: { color: 'white' } },
+                    y: { ticks: { color: 'white' } }
+                }
+            }
+        });
+
+        // 🔥 استقبال البيانات
+        socket.on("update", function (data) {
+
+            // تحديث Chart
+            chart.data.datasets[0].data = [
+                data.devices,
+                data.alerts,
+                data.ports
+            ];
+            chart.update();
+
+            // تحديث النصوص
+            document.getElementById("sent").innerText = "Sent: " + data.usage.bytes_sent;
+            document.getElementById("recv").innerText = "Received: " + data.usage.bytes_recv;
+        });
+    </script>
+    <script>
+        const socket = io();
+
+        socket.on("network_usage", function (data) {
+            document.getElementById("sent").innerText = "Sent: " + data.usage.bytes_sent;
+            document.getElementById("recv").innerText = "Received: " + data.usage.bytes_recv;
+        });
+    </script>
+
+</body>
+</html>
+
+<script>
+    const trafficCtx = document.getElementById('trafficChart');
+
+    let trafficChart = new Chart(trafficCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Upload (Bytes Sent)',
+                    data: [],
+                    borderWidth: 2,
+                    tension: 0.4
+                },
+                {
+                    label: 'Download (Bytes Received)',
+                    data: [],
+                    borderWidth: 2,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: { color: 'white' }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: 'white' }
+                },
+                y: {
+                    ticks: { color: 'white' }
+                }
+            }
+        }
+    });
+
+    // 🔥 تحديث مباشر
+    function updateTraffic() {
+        fetch('/data')
+            .then(res => res.json())
+            .then(data => {
+
+                let time = new Date().toLocaleTimeString();
+
+                // إضافة بيانات جديدة
+                trafficChart.data.labels.push(time);
+                trafficChart.data.datasets[0].data.push(data.traffic.sent);
+                trafficChart.data.datasets[1].data.push(data.traffic.recv);
+
+                // تحديد عدد النقاط (آخر 10 فقط)
+                if (trafficChart.data.labels.length > 10) {
+                    trafficChart.data.labels.shift();
+                    trafficChart.data.datasets[0].data.shift();
+                    trafficChart.data.datasets[1].data.shift();
+                }
+
+                trafficChart.update();
+            });
+    }
+
+    // تحديث كل 2 ثانية
+    setInterval(updateTraffic, 2000);
+</script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const socket = io();
+
+    socket.on("packet", function (data) {
+
+        let table = document.getElementById("packetTable");
+
+        let row = `
+        <tr>
+            <td>${data.src}</td>
+            <td>${data.dst}</td>
+            <td>${data.protocol}</td>
+            <td style="color:red;">${data.alert}</td>
+        </tr>
+    `;
+
+        table.innerHTML = row + table.innerHTML;
+
+        // احتفظ فقط بآخر 20 سطر
+        if (table.rows.length > 20) {
+            table.deleteRow(-1);
+        }
+    });
+</script>
+<script>
+    socket.on("ddos_alert", function (data) {
+
+        let list = document.getElementById("ddosAlerts");
+
+        let item = `
+        <li style="color:red;">
+            🚨 DDoS Attack from ${data.ip} (${data.count} packets)
+        </li>
+    `;
+
+        list.innerHTML = item + list.innerHTML;
+    });
+</script>
+<script>
+    socket.on("ids_alert", function (data) {
+
+        let list = document.getElementById("idsAlerts");
+
+        let item = `
+        <li style="color:red;">
+            ${data.message}
+        </li>
+    `;
+
+        list.innerHTML = item + list.innerHTML;
+
+        // احتفظ بـ 20 فقط
+        if (list.children.length > 20) {
+            list.removeChild(list.lastChild);
+        }
+    });
+</script>
