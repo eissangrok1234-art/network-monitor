@@ -103,18 +103,12 @@ thread.start()
 
 # تشغيل السيرفر
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    
 
     from sniffer import start_sniffer
 import threading
+ 
 
-@app.route("/sniff")
-def sniff_packets():
-    thread = threading.Thread(target=start_sniffer, args=(socketio,))
-    thread.daemon = True
-    thread.start()
-
-    return redirect(url_for("home")) 
 from report import generate_report
 
 @app.route("/report")
@@ -122,10 +116,7 @@ def report():
     generate_report(devices, alerts_list)
     return "Report generated!"
 import os
-from flask_socketio import SocketIO
-
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port)
