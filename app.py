@@ -122,7 +122,10 @@ def report():
     generate_report(devices, alerts_list)
     return "Report generated!"
 import os
+from flask_socketio import SocketIO
+
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     socketio.run(app, host="0.0.0.0", port=port)
